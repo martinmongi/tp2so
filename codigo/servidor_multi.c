@@ -13,6 +13,11 @@ typedef struct {
 	int rescatistas_disponibles;
 } t_aula;
 
+typedef struct {
+	int socketfd_cliente;
+	t_aula* aula;
+} parametros_manejador;
+
 void t_aula_iniciar_vacia(t_aula *un_aula)
 {
 	int i, j;
@@ -118,8 +123,11 @@ void colocar_mascara(t_aula *el_aula, t_persona *alumno)
 }
 
 
-void *atendedor_de_alumno(int socket_fd, t_aula *el_aula)
+void *atendedor_de_alumno(void* param)
 {
+	parametros_manejador* p = (parametros_manejador*) param;
+	int socket_fd = p->socketfd_cliente;
+	t_aula *el_aula = p->aula;
 	t_persona alumno;
 	t_persona_inicializar(&alumno);
 	
@@ -163,7 +171,7 @@ void *atendedor_de_alumno(int socket_fd, t_aula *el_aula)
 	
 	printf("Listo, %s es libre!\n", alumno.nombre);
 	
-	return NULL;
+	pthread_exit(NULL);
 
 }
 
@@ -206,13 +214,18 @@ int main(void)
 		{			
 			printf("!! Error al aceptar conexion\n");
 		}
-		else
+		else{
 			//ACA ES DONDE TENGO QUE CREAR OTRO THREAD Y SEGUIR ESCUCHANDO
-			atendedor_de_alumno(socketfd_cliente, &el_aula);
+			pthread_t tid;
+			parametros_manejador param;
+			param.socketfd_cliente = socketfd_cliente;
+			param.aula = &el_aula;
+			pthread_create(&tid, NULL, (void*)atendedor_de_alumno, (void*) &param);
+		}
 	}
 
 
-	return 0;
+	return 0; // AVOID C WARNING
 }
 
 
