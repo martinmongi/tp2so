@@ -60,3 +60,5 @@ int esperar_respuesta(int socketfd, t_comando *respuesta);
 int recibir(int s, char* buf);
 int enviar(int s, char* buf);
 
+int max(int a, int b);
+int min(int a, int b);

@@ -1,13 +1,15 @@
 #include <signal.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "biblioteca.h"
 
 /* Estructura que almacena los datos de una reserva. */
 typedef struct {
 	int posiciones[ANCHO_AULA][ALTO_AULA];
+	pthread_mutex_t mutex[ANCHO_AULA][ALTO_AULA];
+	pthread_mutex_t mutex_personas;
 	int cantidad_de_personas;
-	
 	int rescatistas_disponibles;
 } t_aula;
 
@@ -19,24 +21,34 @@ void t_aula_iniciar_vacia(t_aula *un_aula)
 		for (j = 0; j < ALTO_AULA; j++)
 		{
 			un_aula->posiciones[i][j] = 0;
+			pthread_mutex_init(&(un_aula->mutex[i][j]), NULL);
 		}
 	}
 	
 	un_aula->cantidad_de_personas = 0;
+	pthread_mutex_init(&(un_aula->mutex_personas), NULL);
 	
 	un_aula->rescatistas_disponibles = RESCATISTAS;
 }
 
 void t_aula_ingresar(t_aula *un_aula, t_persona *alumno)
 {
+	pthread_mutex_lock(&(un_aula->mutex_personas));
+	pthread_mutex_lock(&(un_aula->mutex[alumno->posicion_fila][alumno->posicion_columna]));
 	un_aula->cantidad_de_personas++;
 	un_aula->posiciones[alumno->posicion_fila][alumno->posicion_columna]++;
+	pthread_mutex_unlock(&(un_aula->mutex[alumno->posicion_fila][alumno->posicion_columna]));
+	pthread_mutex_unlock(&(un_aula->mutex_personas));
 }
 
 void t_aula_liberar(t_aula *un_aula, t_persona *alumno)
 {
+	pthread_mutex_lock(&(un_aula->mutex_personas));
+	pthread_mutex_lock(&(un_aula->mutex[alumno->posicion_fila][alumno->posicion_columna]));
 	un_aula->cantidad_de_personas--;
 	un_aula->posiciones[alumno->posicion_fila][alumno->posicion_columna]--;
+	pthread_mutex_unlock(&(un_aula->mutex[alumno->posicion_fila][alumno->posicion_columna]));
+	pthread_mutex_unlock(&(un_aula->mutex_personas));
 }
 
 static void terminar_servidor_de_alumno(int socket_fd, t_aula *aula, t_persona *alumno) {
@@ -69,9 +81,21 @@ t_comando intentar_moverse(t_aula *el_aula, t_persona *alumno, t_direccion dir)
 	
 	if (pudo_moverse)
 	{
+		int f1 = min(fila, alumno->posicion_fila);
+		int c1 = min(columna, alumno->posicion_columna);
+		int f2 = max(fila, alumno->posicion_fila);
+		int c2 = max(columna, alumno->posicion_columna);
+
+		pthread_mutex_lock(&(el_aula->mutex[f1][c1]));
+		pthread_mutex_lock(&(el_aula->mutex[f2][c2]));
+
 		if (!alumno->salio)
 			el_aula->posiciones[fila][columna]++;
 		el_aula->posiciones[alumno->posicion_fila][alumno->posicion_columna]--;
+
+		pthread_mutex_unlock(&(el_aula->mutex[f2][c2]));
+		pthread_mutex_unlock(&(el_aula->mutex[f1][c1]));
+
 		alumno->posicion_fila = fila;
 		alumno->posicion_columna = columna;
 	}
@@ -183,6 +207,7 @@ int main(void)
 			printf("!! Error al aceptar conexion\n");
 		}
 		else
+			//ACA ES DONDE TENGO QUE CREAR OTRO THREAD Y SEGUIR ESCUCHANDO
 			atendedor_de_alumno(socketfd_cliente, &el_aula);
 	}
 
