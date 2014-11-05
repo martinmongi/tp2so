@@ -9,6 +9,7 @@ typedef struct {
 	int posiciones[ANCHO_AULA][ALTO_AULA];
 	pthread_mutex_t mutex[ANCHO_AULA][ALTO_AULA];
 	pthread_mutex_t mutex_personas;
+	pthread_mutex_t mutex_param;
 	int cantidad_de_personas;
 	int rescatistas_disponibles;
 } t_aula;
@@ -32,6 +33,7 @@ void t_aula_iniciar_vacia(t_aula *un_aula)
 	
 	un_aula->cantidad_de_personas = 0;
 	pthread_mutex_init(&(un_aula->mutex_personas), NULL);
+	pthread_mutex_init(&(un_aula->mutex_param), NULL);
 	
 	un_aula->rescatistas_disponibles = RESCATISTAS;
 }
@@ -128,6 +130,7 @@ void *atendedor_de_alumno(void* param)
 	parametros_manejador* p = (parametros_manejador*) param;
 	int socket_fd = p->socketfd_cliente;
 	t_aula *el_aula = p->aula;
+	pthread_mutex_unlock(&(el_aula->mutex_param));
 	t_persona alumno;
 	t_persona_inicializar(&alumno);
 	
@@ -164,9 +167,13 @@ void *atendedor_de_alumno(void* param)
 			break;
 	}
 	
+	//ACA TENGO QUE PONER EL WAIT DE QUE HAYA RESCATISTA LIBRE
 	colocar_mascara(el_aula, &alumno);
+	//SIGNAL DE QUE YA LO RESCATE
 
-	t_aula_liberar(el_aula, &alumno);
+	//ACA TENGO QUE PONER EL WAIT DE QUE HAYA 5 PERSONAS EN LA SALIDA
+	t_aula_liberar(el_aula, &alumno)
+	
 	enviar_respuesta(socket_fd, LIBRE);
 	
 	printf("Listo, %s es libre!\n", alumno.nombre);
@@ -217,6 +224,7 @@ int main(void)
 		else{
 			//ACA ES DONDE TENGO QUE CREAR OTRO THREAD Y SEGUIR ESCUCHANDO
 			pthread_t tid;
+			pthread_mutex_lock(&(el_aula.mutex_param));
 			parametros_manejador param;
 			param.socketfd_cliente = socketfd_cliente;
 			param.aula = &el_aula;
