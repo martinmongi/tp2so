@@ -181,25 +181,24 @@ void *atendedor_de_alumno(void* param)
 		pthread_cond_wait(&(el_aula->vc_rescatistas), &(el_aula->mutex_rescatistas));
 	el_aula->rescatistas_disponibles--;
 	pthread_mutex_unlock(&(el_aula->mutex_rescatistas));
-	pthread_cond_broadcast(&(el_aula->vc_rescatistas));
 
 	colocar_mascara(el_aula, &alumno);
 
 	pthread_mutex_lock(&(el_aula->mutex_rescatistas));
 	el_aula->rescatistas_disponibles++;
+	pthread_cond_broadcast(&(el_aula->vc_rescatistas));
 	pthread_mutex_unlock(&(el_aula->mutex_rescatistas));
 
-	pthread_mutex_lock(&(el_aula->mutex_salida));
+
+	/*pthread_mutex_lock(&(el_aula->mutex_salida));
 	el_aula->gente_salida++;
 	while(el_aula->gente_salida < 5 && el_aula->gente_salida != el_aula->cantidad_de_personas)
 		pthread_cond_wait(&(el_aula->vc_salida), &(el_aula->mutex_salida));
-	pthread_mutex_unlock(&(el_aula->mutex_salida));
-	pthread_cond_broadcast(&(el_aula->vc_salida));
-	t_aula_liberar(el_aula, &alumno);
-
-	pthread_mutex_lock(&(el_aula->mutex_salida));
 	el_aula->gente_salida--;
+	*/t_aula_liberar(el_aula, &alumno);
+	/*pthread_cond_broadcast(&(el_aula->vc_salida));
 	pthread_mutex_unlock(&(el_aula->mutex_salida));
+	*/
 
 	enviar_respuesta(socket_fd, LIBRE);
 	
