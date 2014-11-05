@@ -6,12 +6,17 @@
 
 /* Estructura que almacena los datos de una reserva. */
 typedef struct {
-	int posiciones[ANCHO_AULA][ALTO_AULA];
-	pthread_mutex_t mutex[ANCHO_AULA][ALTO_AULA];
+	int posiciones[ALTO_AULA][ANCHO_AULA];
+	pthread_mutex_t mutex[ALTO_AULA][ANCHO_AULA];
 	pthread_mutex_t mutex_personas;
 	pthread_mutex_t mutex_param;
+	pthread_mutex_t mutex_rescatistas;
+	pthread_cond_t vc_rescatistas;
+	pthread_mutex_t mutex_salida;
+	pthread_cond_t vc_salida;
 	int cantidad_de_personas;
 	int rescatistas_disponibles;
+	int gente_salida;
 } t_aula;
 
 typedef struct {
@@ -22,9 +27,9 @@ typedef struct {
 void t_aula_iniciar_vacia(t_aula *un_aula)
 {
 	int i, j;
-	for(i = 0; i < ANCHO_AULA; i++)
+	for(i = 0; i < ALTO_AULA; i++)
 	{
-		for (j = 0; j < ALTO_AULA; j++)
+		for (j = 0; j < ANCHO_AULA; j++)
 		{
 			un_aula->posiciones[i][j] = 0;
 			pthread_mutex_init(&(un_aula->mutex[i][j]), NULL);
@@ -32,9 +37,13 @@ void t_aula_iniciar_vacia(t_aula *un_aula)
 	}
 	
 	un_aula->cantidad_de_personas = 0;
+	un_aula->gente_salida = 0;
 	pthread_mutex_init(&(un_aula->mutex_personas), NULL);
 	pthread_mutex_init(&(un_aula->mutex_param), NULL);
-	
+	pthread_mutex_init(&(un_aula->mutex_rescatistas), NULL);
+	pthread_cond_init(&(un_aula->vc_rescatistas), NULL);
+	pthread_mutex_init(&(un_aula->mutex_salida), NULL);
+	pthread_cond_init(&(un_aula->vc_salida), NULL);
 	un_aula->rescatistas_disponibles = RESCATISTAS;
 }
 
@@ -167,13 +176,31 @@ void *atendedor_de_alumno(void* param)
 			break;
 	}
 	
-	//ACA TENGO QUE PONER EL WAIT DE QUE HAYA RESCATISTA LIBRE
-	colocar_mascara(el_aula, &alumno);
-	//SIGNAL DE QUE YA LO RESCATE
+	pthread_mutex_lock(&(el_aula->mutex_rescatistas));
+	while(el_aula->rescatistas_disponibles <= 0)
+		pthread_cond_wait(&(el_aula->vc_rescatistas), &(el_aula->mutex_rescatistas));
+	el_aula->rescatistas_disponibles--;
+	pthread_mutex_unlock(&(el_aula->mutex_rescatistas));
+	pthread_cond_broadcast(&(el_aula->vc_rescatistas));
 
-	//ACA TENGO QUE PONER EL WAIT DE QUE HAYA 5 PERSONAS EN LA SALIDA
-	t_aula_liberar(el_aula, &alumno)
-	
+	colocar_mascara(el_aula, &alumno);
+
+	pthread_mutex_lock(&(el_aula->mutex_rescatistas));
+	el_aula->rescatistas_disponibles++;
+	pthread_mutex_unlock(&(el_aula->mutex_rescatistas));
+
+	pthread_mutex_lock(&(el_aula->mutex_salida));
+	el_aula->gente_salida++;
+	while(el_aula->gente_salida < 5 && el_aula->gente_salida != el_aula->cantidad_de_personas)
+		pthread_cond_wait(&(el_aula->vc_salida), &(el_aula->mutex_salida));
+	pthread_mutex_unlock(&(el_aula->mutex_salida));
+	pthread_cond_broadcast(&(el_aula->vc_salida));
+	t_aula_liberar(el_aula, &alumno);
+
+	pthread_mutex_lock(&(el_aula->mutex_salida));
+	el_aula->gente_salida--;
+	pthread_mutex_unlock(&(el_aula->mutex_salida));
+
 	enviar_respuesta(socket_fd, LIBRE);
 	
 	printf("Listo, %s es libre!\n", alumno.nombre);
