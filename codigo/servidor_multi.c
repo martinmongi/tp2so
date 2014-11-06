@@ -17,6 +17,7 @@ typedef struct {
 	int cantidad_de_personas;
 	int rescatistas_disponibles;
 	int gente_salida;
+	int estan_saliendo;
 } t_aula;
 
 typedef struct {
@@ -45,6 +46,7 @@ void t_aula_iniciar_vacia(t_aula *un_aula)
 	pthread_mutex_init(&(un_aula->mutex_salida), NULL);
 	pthread_cond_init(&(un_aula->vc_salida), NULL);
 	un_aula->rescatistas_disponibles = RESCATISTAS;
+	un_aula->estan_saliendo = 0;	
 }
 
 void t_aula_ingresar(t_aula *un_aula, t_persona *alumno)
@@ -189,16 +191,21 @@ void *atendedor_de_alumno(void* param)
 	pthread_cond_broadcast(&(el_aula->vc_rescatistas));
 	pthread_mutex_unlock(&(el_aula->mutex_rescatistas));
 
-
-	/*pthread_mutex_lock(&(el_aula->mutex_salida));
+	pthread_mutex_lock(&(el_aula->mutex_salida));
 	el_aula->gente_salida++;
-	while(el_aula->gente_salida < 5 && el_aula->gente_salida != el_aula->cantidad_de_personas)
+	while(el_aula->gente_salida < 5 && el_aula->estan_saliendo == 0 && el_aula->gente_salida != el_aula->cantidad_de_personas)
 		pthread_cond_wait(&(el_aula->vc_salida), &(el_aula->mutex_salida));
+	el_aula->estan_saliendo++;
 	el_aula->gente_salida--;
-	*/t_aula_liberar(el_aula, &alumno);
-	/*pthread_cond_broadcast(&(el_aula->vc_salida));
+	if(el_aula->estan_saliendo == 5 || el_aula->estan_saliendo == el_aula->cantidad_de_personas){
+		el_aula->estan_saliendo = 0;
+	}
+	t_aula_liberar(el_aula, &alumno);
 	pthread_mutex_unlock(&(el_aula->mutex_salida));
-	*/
+	pthread_cond_broadcast(&(el_aula->vc_salida));
+
+
+
 
 	enviar_respuesta(socket_fd, LIBRE);
 	

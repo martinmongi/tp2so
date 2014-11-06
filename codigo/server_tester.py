@@ -4,6 +4,7 @@ import socket
 import sys
 import time
 from paises import *
+import random
 
 HOST = 'localhost'
 PORT = 5555
@@ -81,7 +82,7 @@ class Cliente:
  
 clientes = []
 for i in range(CLIENTES):
-	 c = Cliente(paises[i], (5,5))
+	 c = Cliente(paises[random.randint(0,100)], (5,5))
 	 clientes.append(c)
 	 
 #for cliente in clientes:
