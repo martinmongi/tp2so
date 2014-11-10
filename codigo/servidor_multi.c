@@ -13,7 +13,6 @@ typedef struct {
 	pthread_cond_t vc_rescatistas;
 	pthread_mutex_t mutex_salida;
 	pthread_cond_t vc_salida;
-	//pthread_mutex_t mutex_estan_saliendo;
 	int cantidad_de_personas;
 	int rescatistas_disponibles;
 	int gente_salida;
@@ -195,11 +194,9 @@ void *atendedor_de_alumno(void* param)
 	while(el_aula->gente_salida < 5 && el_aula->estan_saliendo == 0 && el_aula->gente_salida != el_aula->cantidad_de_personas)
 		pthread_cond_wait(&(el_aula->vc_salida), &(el_aula->mutex_salida));
 	el_aula->gente_salida--;
-	//pthread_mutex_lock(&(el_aula->mutex_estan_saliendo));
 	el_aula->estan_saliendo++;
 	if(el_aula->estan_saliendo == 5 || el_aula->estan_saliendo == el_aula->cantidad_de_personas)
 		el_aula->estan_saliendo = 0;
-	//pthread_mutex_lock(&(el_aula->mutex_estan_saliendo));
 	t_aula_liberar(el_aula, &alumno);
 	pthread_mutex_unlock(&(el_aula->mutex_salida));
 	pthread_cond_broadcast(&(el_aula->vc_salida));
