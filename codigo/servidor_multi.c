@@ -9,6 +9,7 @@ typedef struct {
 	int posiciones[ALTO_AULA][ANCHO_AULA];
 	pthread_mutex_t mutex[ALTO_AULA][ANCHO_AULA];
 	pthread_mutex_t mutex_personas;
+	pthread_mutex_t mutex_param;
 	pthread_mutex_t mutex_rescatistas;
 	pthread_cond_t vc_rescatistas;
 	pthread_mutex_t mutex_salida;
@@ -39,11 +40,11 @@ void t_aula_iniciar_vacia(t_aula *un_aula)
 	un_aula->cantidad_de_personas = 0;
 	un_aula->gente_salida = 0;
 	pthread_mutex_init(&(un_aula->mutex_personas), NULL);
+	pthread_mutex_init(&(un_aula->mutex_param), NULL);
 	pthread_mutex_init(&(un_aula->mutex_rescatistas), NULL);
 	pthread_cond_init(&(un_aula->vc_rescatistas), NULL);
 	pthread_mutex_init(&(un_aula->mutex_salida), NULL);
 	pthread_cond_init(&(un_aula->vc_salida), NULL);
-	//pthread_mutex_init(&(un_aula->mutex_estan_saliendo), NULL);
 	un_aula->rescatistas_disponibles = RESCATISTAS;
 	un_aula->estan_saliendo = 0;	
 }
@@ -140,6 +141,7 @@ void *atendedor_de_alumno(void* param)
 	parametros_manejador* p = (parametros_manejador*) param;
 	int socket_fd = p->socketfd_cliente;
 	t_aula *el_aula = p->aula;
+	pthread_mutex_unlock(&(el_aula->mutex_param));
 	t_persona alumno;
 	t_persona_inicializar(&alumno);
 	
@@ -254,6 +256,7 @@ int main(void)
 		else{
 			//ACA ES DONDE TENGO QUE CREAR OTRO THREAD Y SEGUIR ESCUCHANDO
 			pthread_t tid;
+			pthread_mutex_unlock(&(el_aula.mutex_param));
 			parametros_manejador param;
 			param.socketfd_cliente = socketfd_cliente;
 			param.aula = &el_aula;
