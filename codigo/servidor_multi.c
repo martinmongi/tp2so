@@ -256,7 +256,7 @@ int main(void)
 		else{
 			//ACA ES DONDE TENGO QUE CREAR OTRO THREAD Y SEGUIR ESCUCHANDO
 			pthread_t tid;
-			pthread_mutex_unlock(&(el_aula.mutex_param));
+			pthread_mutex_lock(&(el_aula.mutex_param));
 			parametros_manejador param;
 			param.socketfd_cliente = socketfd_cliente;
 			param.aula = &el_aula;
